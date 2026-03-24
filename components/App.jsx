@@ -18,6 +18,42 @@ const CITIES = ["Bengaluru", "Mumbai", "Delhi", "Chennai", "Hyderabad", "Pune", 
 const AuthCtx = createContext(null);
 function useAuth() { return useContext(AuthCtx); }
 
+// ─── THEME CONTEXT ───────────────────────────────────────────────────────────
+const ThemeCtx = createContext(null);
+function useTheme() { return useContext(ThemeCtx); }
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    // Load theme from localStorage on mount
+    const savedTheme = localStorage.getItem('pandit-theme');
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
+    }
+  }, []);
+
+  useEffect(() => {
+    // Apply theme to document
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('pandit-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  return (
+    <ThemeCtx.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeCtx.Provider>
+  );
+}
+
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 function uid() { return `id_${++DB.nextId}`; }
 function today() { return new Date().toISOString().split("T")[0]; }
@@ -55,10 +91,11 @@ function Badge({ status }) {
 function Card({ children, style = {} }) {
   return (
     <div style={{
-      background: "rgba(255,255,255,0.04)",
-      border: "1px solid rgba(255,255,255,0.09)",
+      background: "var(--bg-card)",
+      border: "1px solid var(--border-primary)",
       borderRadius: 16,
       padding: "24px",
+      boxShadow: "0 4px 6px var(--shadow-secondary)",
       ...style,
     }}>{children}</div>
   );
@@ -67,17 +104,17 @@ function Card({ children, style = {} }) {
 function Input({ label, ...props }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      {label && <label style={{ display: "block", fontSize: 12, color: "#a0855b", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>}
+      {label && <label style={{ display: "block", fontSize: 12, color: "var(--text-accent)", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>}
       <input style={{
         width: "100%", boxSizing: "border-box",
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,200,120,0.2)",
+        background: "var(--input-bg)",
+        border: "1px solid var(--input-border)",
         borderRadius: 10, padding: "10px 14px",
-        color: "#f5ede0", fontSize: 15, outline: "none",
+        color: "var(--text-primary)", fontSize: 15, outline: "none",
         transition: "border-color 0.2s",
       }}
-        onFocus={e => e.target.style.borderColor = "#e8a045"}
-        onBlur={e => e.target.style.borderColor = "rgba(255,200,120,0.2)"}
+        onFocus={e => e.target.style.borderColor = "var(--input-focus)"}
+        onBlur={e => e.target.style.borderColor = "var(--input-border)"}
         {...props}
       />
     </div>
@@ -87,13 +124,13 @@ function Input({ label, ...props }) {
 function Select({ label, children, ...props }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      {label && <label style={{ display: "block", fontSize: 12, color: "#a0855b", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>}
+      {label && <label style={{ display: "block", fontSize: 12, color: "var(--text-accent)", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>}
       <select style={{
         width: "100%", boxSizing: "border-box",
-        background: "#1a1208",
-        border: "1px solid rgba(255,200,120,0.2)",
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--input-border)",
         borderRadius: 10, padding: "10px 14px",
-        color: "#f5ede0", fontSize: 15, outline: "none",
+        color: "var(--text-primary)", fontSize: 15, outline: "none",
       }} {...props}>{children}</select>
     </div>
   );
@@ -107,10 +144,10 @@ function Btn({ children, variant = "primary", style = {}, ...props }) {
     ...style,
   };
   const variants = {
-    primary: { background: "linear-gradient(135deg,#e8a045,#c4721a)", color: "#fff" },
+    primary: { background: "var(--gradient-primary)", color: "#fff" },
     danger: { background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" },
     success: { background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },
-    ghost: { background: "rgba(255,255,255,0.06)", color: "#e8c87a", border: "1px solid rgba(255,200,100,0.15)" },
+    ghost: { background: "var(--bg-overlay)", color: "var(--text-accent)", border: "1px solid var(--border-accent)" },
   };
   return <button style={{ ...base, ...variants[variant] }} {...props}>{children}</button>;
 }
@@ -146,17 +183,21 @@ function AuthScreen({ onAuth }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "radial-gradient(ellipse at 30% 20%, #1e0f00 0%, #0c0804 60%, #000 100%)",
+      background: "var(--bg-primary)",
     }}>
       {/* Decorative */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundImage: "radial-gradient(circle at 80% 80%, rgba(200,120,30,0.06) 0%, transparent 60%)", pointerEvents: "none" }} />
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        backgroundImage: "radial-gradient(circle at 80% 80%, var(--bg-overlay) 0%, transparent 60%)",
+        pointerEvents: "none"
+      }} />
 
       <div style={{ width: "100%", maxWidth: 440, padding: "0 20px" }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>🕉️</div>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 32, color: "#e8c87a", fontWeight: 700, letterSpacing: "-0.01em" }}>PanditJi</div>
-          <div style={{ color: "#7a6040", fontSize: 14, marginTop: 4 }}>Sacred services, simplified</div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 32, color: "var(--text-accent)", fontWeight: 700, letterSpacing: "-0.01em" }}>PanditJi</div>
+          <div style={{ color: "var(--text-secondary)", fontSize: 14, marginTop: 4 }}>Sacred services, simplified</div>
         </div>
 
         <Card>
@@ -214,6 +255,7 @@ function AuthScreen({ onAuth }) {
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 
 function Nav({ user, tab, setTab, onLogout }) {
+  const { theme, toggleTheme } = useTheme();
   const userTabs = [
     { id: "search", label: "🔍 Find Pandits" },
     { id: "bookings", label: "📋 My Bookings" },
@@ -227,24 +269,40 @@ function Nav({ user, tab, setTab, onLogout }) {
   return (
     <nav style={{
       position: "sticky", top: 0, zIndex: 100,
-      background: "rgba(10,6,2,0.92)", backdropFilter: "blur(12px)",
-      borderBottom: "1px solid rgba(255,200,100,0.08)",
+      background: "var(--bg-secondary)", backdropFilter: "blur(12px)",
+      borderBottom: "1px solid var(--border-primary)",
       display: "flex", alignItems: "center", padding: "0 24px", height: 60,
     }}>
-      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#e8c87a", fontWeight: 700, fontSize: 20, marginRight: 32 }}>🕉️ PanditJi</div>
+      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "var(--text-accent)", fontWeight: 700, fontSize: 20, marginRight: 32 }}>🕉️ PanditJi</div>
       <div style={{ display: "flex", gap: 4, flex: 1 }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{
               padding: "8px 16px", border: "none", borderRadius: 8,
-              background: tab === t.id ? "rgba(232,160,69,0.15)" : "transparent",
-              color: tab === t.id ? "#e8a045" : "#5a4030",
+              background: tab === t.id ? "var(--bg-overlay)" : "transparent",
+              color: tab === t.id ? "var(--text-accent)" : "var(--text-secondary)",
               fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "all 0.15s",
             }}>{t.label}</button>
         ))}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ color: "#7a5030", fontSize: 13 }}>
+        <button
+          onClick={toggleTheme}
+          style={{
+            background: "var(--bg-overlay)",
+            border: "1px solid var(--border-accent)",
+            borderRadius: 8,
+            padding: "6px",
+            cursor: "pointer",
+            color: "var(--text-accent)",
+            fontSize: 16,
+            transition: "all 0.2s",
+          }}
+          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+        <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>
           {user.role === "pandit" ? "🛕" : "👤"} {user.name}
         </span>
         <Btn variant="ghost" style={{ padding: "7px 14px", fontSize: 12 }} onClick={onLogout}>Logout</Btn>
@@ -288,22 +346,22 @@ function SearchPandits({ user }) {
       )}
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
-        <h2 style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "#e8c87a", fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Find a Pandit</h2>
-        <p style={{ color: "#7a5030", marginBottom: 28 }}>Search for experienced pandits in your city</p>
+        <h2 style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "var(--text-accent)", fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Find a Pandit</h2>
+        <p style={{ color: "var(--text-secondary)", marginBottom: 28 }}>Search for experienced pandits in your city</p>
 
         <Card style={{ marginBottom: 28 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 16, alignItems: "end" }}>
             <div>
-              <label style={{ display: "block", fontSize: 11, color: "#a0855b", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>City *</label>
+              <label style={{ display: "block", fontSize: 11, color: "var(--text-accent)", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>City *</label>
               <select value={city} onChange={e => setCity(e.target.value)}
-                style={{ width: "100%", background: "#1a1208", border: "1px solid rgba(255,200,120,0.2)", borderRadius: 10, padding: "10px 14px", color: "#f5ede0", fontSize: 14, outline: "none" }}>
+                style={{ width: "100%", background: "var(--bg-tertiary)", border: "1px solid var(--input-border)", borderRadius: 10, padding: "10px 14px", color: "var(--text-primary)", fontSize: 14, outline: "none" }}>
                 {CITIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 11, color: "#a0855b", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>Service</label>
+              <label style={{ display: "block", fontSize: 11, color: "var(--text-accent)", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>Service</label>
               <select value={service} onChange={e => setService(e.target.value)}
-                style={{ width: "100%", background: "#1a1208", border: "1px solid rgba(255,200,120,0.2)", borderRadius: 10, padding: "10px 14px", color: "#f5ede0", fontSize: 14, outline: "none" }}>
+                style={{ width: "100%", background: "var(--bg-tertiary)", border: "1px solid var(--input-border)", borderRadius: 10, padding: "10px 14px", color: "var(--text-primary)", fontSize: 14, outline: "none" }}>
                 <option value="">All Services</option>
                 {SERVICES.map(s => <option key={s}>{s}</option>)}
               </select>
@@ -314,11 +372,11 @@ function SearchPandits({ user }) {
 
         {searched && (
           <>
-            <div style={{ color: "#7a5030", fontSize: 13, marginBottom: 16 }}>{results.length} pandit{results.length !== 1 ? "s" : ""} found in {city}</div>
+            <div style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 16 }}>{results.length} pandit{results.length !== 1 ? "s" : ""} found in {city}</div>
             {results.length === 0 ? (
               <Card style={{ textAlign: "center", padding: "48px 24px" }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-                <div style={{ color: "#5a4030", fontSize: 15 }}>No pandits found. Try a different city or service.</div>
+                <div style={{ color: "var(--text-secondary)", fontSize: 15 }}>No pandits found. Try a different city or service.</div>
               </Card>
             ) : (
               <div style={{ display: "grid", gap: 16 }}>
@@ -331,15 +389,15 @@ function SearchPandits({ user }) {
                       fontSize: 22, flexShrink: 0,
                     }}>🛕</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "#e8c87a", fontSize: 18, fontWeight: 700 }}>{p.name}</div>
-                      <div style={{ color: "#7a5030", fontSize: 13, marginTop: 3 }}>
+                      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "var(--text-accent)", fontSize: 18, fontWeight: 700 }}>{p.name}</div>
+                      <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 3 }}>
                         📍 {p.city} &nbsp;·&nbsp; 🙏 {p.service}
                       </div>
-                      {p.bio && <div style={{ color: "#5a4030", fontSize: 12, marginTop: 4 }}>{p.bio}</div>}
+                      {p.bio && <div style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 4 }}>{p.bio}</div>}
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ color: "#e8c87a", fontSize: 22, fontWeight: 800, fontFamily: "'Playfair Display',Georgia,serif" }}>₹{p.price.toLocaleString()}</div>
-                      <div style={{ color: "#5a4030", fontSize: 11, marginBottom: 8 }}>per ceremony</div>
+                      <div style={{ color: "var(--text-accent)", fontSize: 22, fontWeight: 800, fontFamily: "'Playfair Display',Georgia,serif" }}>₹{p.price.toLocaleString()}</div>
+                      <div style={{ color: "var(--text-muted)", fontSize: 11, marginBottom: 8 }}>per ceremony</div>
                       <Btn onClick={() => setBookingPandit(p)}>Book Now</Btn>
                     </div>
                   </Card>
@@ -630,19 +688,23 @@ function Dashboard({ user, onLogout }) {
   const isNewPandit = currentUser.role === "pandit" && !currentUser.profileComplete;
 
   return (
-    <div style={{ minHeight: "100vh", background: "radial-gradient(ellipse at 20% 10%, #1a0d00 0%, #080502 50%, #000 100%)" }}>
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundImage: "radial-gradient(circle at 90% 90%, rgba(200,120,30,0.04) 0%, transparent 60%)", pointerEvents: "none" }} />
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        backgroundImage: "radial-gradient(circle at 90% 90%, var(--bg-overlay) 0%, transparent 60%)",
+        pointerEvents: "none"
+      }} />
       <Nav user={currentUser} tab={tab} setTab={setTab} onLogout={onLogout} />
       {isNewPandit && tab === "profile" && (
         <div style={{
-          background: "linear-gradient(90deg, rgba(232,160,69,0.12), rgba(196,114,26,0.08))",
-          borderBottom: "1px solid rgba(232,160,69,0.2)",
+          background: "var(--bg-overlay)",
+          borderBottom: "1px solid var(--border-accent)",
           padding: "12px 24px",
           display: "flex", alignItems: "center", gap: 10,
           position: "relative",
         }}>
           <span style={{ fontSize: 18 }}>🛕</span>
-          <span style={{ color: "#e8c87a", fontSize: 14, fontWeight: 600 }}>Welcome! Please complete your profile below to appear in search results for users.</span>
+          <span style={{ color: "var(--text-accent)", fontSize: 14, fontWeight: 600 }}>Welcome! Please complete your profile below to appear in search results for users.</span>
         </div>
       )}
       <div style={{ position: "relative" }}>
@@ -661,12 +723,14 @@ export default function App() {
   const [user, setUser] = useState(null);
 
   return (
-    <AuthCtx.Provider value={{ user, setUser }}>
-      {user ? (
-        <Dashboard user={user} onLogout={() => setUser(null)} />
-      ) : (
-        <AuthScreen onAuth={setUser} />
-      )}
-    </AuthCtx.Provider>
+    <ThemeProvider>
+      <AuthCtx.Provider value={{ user, setUser }}>
+        {user ? (
+          <Dashboard user={user} onLogout={() => setUser(null)} />
+        ) : (
+          <AuthScreen onAuth={setUser} />
+        )}
+      </AuthCtx.Provider>
+    </ThemeProvider>
   );
 }
