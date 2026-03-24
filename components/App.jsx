@@ -5,7 +5,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 // ─── DATA STORE (in-memory, simulates a backend) ───────────────────────────
 const DB = {
   users: [
-    { id: "u1", name: "Arjun Sharma", email: "user@demo.com", password: "demo123", role: "user", city: "Bengaluru" },
+    { id: "u1", name: "Arjun Sharma", email: "user@demo.com", password: "demo123", role: "user", city: "Bengaluru", profilePhoto: null },
   ],
   bookings: [],
   nextId: 100,
@@ -152,11 +152,110 @@ function Btn({ children, variant = "primary", style = {}, ...props }) {
   return <button style={{ ...base, ...variants[variant] }} {...props}>{children}</button>;
 }
 
+// ─── PROFILE PHOTO UPLOAD COMPONENT ───────────────────────────────────────────
+
+function ProfilePhotoUpload({ currentPhoto, onPhotoChange, required = false, label = "Profile Photo" }) {
+  const [preview, setPreview] = useState(currentPhoto);
+  const [error, setError] = useState("");
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    console.log('File selected:', file); // Debug log
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError("Please select a valid image file.");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must be less than 5MB.");
+      return;
+    }
+
+    setError("");
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      setPreview(base64);
+      onPhotoChange(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removePhoto = () => {
+    setPreview(null);
+    onPhotoChange(null);
+    setError("");
+  };
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label style={{ display: "block", fontSize: 11, color: "var(--text-accent)", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        {label} {required && <span style={{ color: "#ef4444" }}>*</span>}
+      </label>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
+        <div style={{
+          width: 80, height: 80, borderRadius: "50%",
+          background: preview ? "transparent" : "var(--bg-overlay)",
+          border: "2px solid var(--border-accent)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          overflow: "hidden", flexShrink: 0,
+        }}>
+          {preview ? (
+            <img src={preview} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ fontSize: 24, color: "var(--text-muted)" }}>👤</span>
+          )}
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+            id="profile-photo-input"
+          />
+          <label htmlFor="profile-photo-input">
+            <Btn variant="ghost" style={{ fontSize: 12, padding: "8px 16px", cursor: "pointer" }}>
+              📷 Choose Photo
+            </Btn>
+          </label>
+          {preview && (
+            <Btn
+              variant="danger"
+              onClick={removePhoto}
+              style={{ fontSize: 12, padding: "8px 16px", marginLeft: 8 }}
+            >
+              🗑️ Remove
+            </Btn>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ color: "var(--text-muted)", fontSize: 11 }}>
+        Supported formats: JPG, PNG, GIF. Max size: 5MB
+      </div>
+    </div>
+  );
+}
+
 // ─── AUTH SCREENS ────────────────────────────────────────────────────────────
 
 function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user", city: "Bengaluru" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user", city: "Bengaluru", profilePhoto: null });
   const [err, setErr] = useState("");
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -170,8 +269,9 @@ function AuthScreen({ onAuth }) {
 
   function handleSignup() {
     if (!form.name || !form.email || !form.password) return setErr("All fields required.");
+    if (form.role === "pandit" && !form.profilePhoto) return setErr("Profile photo is required for pandits.");
     if (DB.users.find(u => u.email === form.email)) return setErr("Email already registered.");
-    const user = { id: uid(), name: form.name, email: form.email, password: form.password, role: form.role, city: form.city };
+    const user = { id: uid(), name: form.name, email: form.email, password: form.password, role: form.role, city: form.city, profilePhoto: form.profilePhoto };
     if (form.role === "pandit") {
       Object.assign(user, { service: "", price: "", bio: "", available: false, profileComplete: false });
     }
@@ -232,6 +332,14 @@ function AuthScreen({ onAuth }) {
               <Select label="City" value={form.city} onChange={e => set("city", e.target.value)}>
                 {CITIES.map(c => <option key={c}>{c}</option>)}
               </Select>
+              {form.role === "pandit" && (
+                <ProfilePhotoUpload
+                  currentPhoto={form.profilePhoto}
+                  onPhotoChange={(photo) => set("profilePhoto", photo)}
+                  required={true}
+                  label="Profile Photo"
+                />
+              )}
             </>
           )}
 
@@ -259,6 +367,7 @@ function Nav({ user, tab, setTab, onLogout }) {
   const userTabs = [
     { id: "search", label: "🔍 Find Pandits" },
     { id: "bookings", label: "📋 My Bookings" },
+    { id: "profile", label: "👤 My Profile" },
   ];
   const panditTabs = [
     { id: "profile", label: "👤 My Profile" },
@@ -538,16 +647,29 @@ function MyBookings({ user }) {
 
 function PanditProfile({ user, setUser }) {
   const pandit = DB.users.find(u => u.id === user.id);
-  const [form, setForm] = useState({ name: pandit.name || "", city: pandit.city || CITIES[0], service: pandit.service || SERVICES[0], price: pandit.price || "", bio: pandit.bio || "" });
+  const [form, setForm] = useState({
+    name: pandit.name || "",
+    city: pandit.city || CITIES[0],
+    service: pandit.service || SERVICES[0],
+    price: pandit.price || "",
+    bio: pandit.bio || "",
+    profilePhoto: pandit.profilePhoto || null
+  });
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState("");
 
   function save() {
     if (!form.name.trim()) return setErr("Name is required.");
     if (!form.price || Number(form.price) <= 0) return setErr("Please enter a valid price.");
+    if (!form.profilePhoto) return setErr("Profile photo is required.");
     setErr("");
     const idx = DB.users.findIndex(u => u.id === user.id);
-    const updated = { ...form, price: Number(form.price), available: true, profileComplete: true };
+    const updated = {
+      ...form,
+      price: Number(form.price),
+      available: true,
+      profileComplete: true
+    };
     Object.assign(DB.users[idx], updated);
     setUser({ ...user, ...updated });
     setSaved(true);
@@ -560,15 +682,34 @@ function PanditProfile({ user, setUser }) {
       <p style={{ color: "#7a5030", marginBottom: 28 }}>Update your details to appear in search results</p>
 
       <Card>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28, paddingBottom: 24, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#e8a045,#c4721a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🛕</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28, paddingBottom: 24, borderBottom: "1px solid var(--border-primary)" }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            background: form.profilePhoto ? "transparent" : "var(--gradient-primary)",
+            border: "2px solid var(--border-accent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 28, overflow: "hidden", flexShrink: 0,
+          }}>
+            {form.profilePhoto ? (
+              <img src={form.profilePhoto} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              "🛕"
+            )}
+          </div>
           <div>
-            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "#e8c87a", fontSize: 20, fontWeight: 700 }}>{pandit.name}</div>
-            <div style={{ color: "#7a5030", fontSize: 13 }}>{pandit.email}</div>
+            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "var(--text-accent)", fontSize: 20, fontWeight: 700 }}>{pandit.name}</div>
+            <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>{pandit.email}</div>
           </div>
         </div>
 
         {err && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13 }}>{err}</div>}
+
+        <ProfilePhotoUpload
+          currentPhoto={form.profilePhoto}
+          onPhotoChange={(photo) => setForm(f => ({ ...f, profilePhoto: photo }))}
+          required={true}
+          label="Profile Photo"
+        />
 
         <Input label="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
         <Select label="City" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))}>
@@ -579,9 +720,9 @@ function PanditProfile({ user, setUser }) {
         </Select>
         <Input label="Price per Ceremony (₹)" type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))} />
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 11, color: "#a0855b", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>Bio</label>
+          <label style={{ display: "block", fontSize: 11, color: "var(--text-accent)", fontWeight: 700, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>Bio</label>
           <textarea value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Brief description about your experience..."
-            style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,200,120,0.2)", borderRadius: 10, padding: "10px 14px", color: "#f5ede0", fontSize: 14, outline: "none", resize: "vertical" }} />
+            style={{ width: "100%", boxSizing: "border-box", background: "var(--input-bg)", border: "1px solid var(--input-border)", borderRadius: 10, padding: "10px 14px", color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "vertical" }} />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -589,6 +730,80 @@ function PanditProfile({ user, setUser }) {
             {user.profileComplete ? "Save Changes ✓" : "Complete Profile & Go Live 🚀"}
           </Btn>
           {saved && <span style={{ color: "#10b981", fontSize: 13, fontWeight: 600 }}>✅ {user.profileComplete ? "Saved!" : "Profile live!"}</span>}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ─── USER: PROFILE ────────────────────────────────────────────────────────────
+
+function UserProfile({ user, setUser }) {
+  const userData = DB.users.find(u => u.id === user.id);
+  const [form, setForm] = useState({
+    name: userData.name || "",
+    city: userData.city || CITIES[0],
+    profilePhoto: userData.profilePhoto || null
+  });
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState("");
+
+  function save() {
+    if (!form.name.trim()) return setErr("Name is required.");
+    setErr("");
+    const idx = DB.users.findIndex(u => u.id === user.id);
+    const updated = { ...form };
+    Object.assign(DB.users[idx], updated);
+    setUser({ ...user, ...updated });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: "32px 24px" }}>
+      <h2 style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "var(--text-accent)", fontSize: 28, fontWeight: 700, marginBottom: 8 }}>My Profile</h2>
+      <p style={{ color: "var(--text-secondary)", marginBottom: 28 }}>Update your personal information</p>
+
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28, paddingBottom: 24, borderBottom: "1px solid var(--border-primary)" }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            background: form.profilePhoto ? "transparent" : "var(--gradient-primary)",
+            border: "2px solid var(--border-accent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 28, overflow: "hidden", flexShrink: 0,
+          }}>
+            {form.profilePhoto ? (
+              <img src={form.profilePhoto} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              "👤"
+            )}
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", color: "var(--text-accent)", fontSize: 20, fontWeight: 700 }}>{userData.name}</div>
+            <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>{userData.email}</div>
+          </div>
+        </div>
+
+        {err && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13 }}>{err}</div>}
+
+        <ProfilePhotoUpload
+          currentPhoto={form.profilePhoto}
+          onPhotoChange={(photo) => setForm(f => ({ ...f, profilePhoto: photo }))}
+          required={false}
+          label="Profile Photo (Optional)"
+        />
+
+        <Input label="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+        <Select label="City" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))}>
+          {CITIES.map(c => <option key={c}>{c}</option>)}
+        </Select>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 24 }}>
+          <Btn onClick={save} style={{ flex: 1, padding: 13, fontSize: 15 }}>
+            Save Changes ✓
+          </Btn>
+          {saved && <span style={{ color: "#10b981", fontSize: 13, fontWeight: 600 }}>✅ Saved!</span>}
         </div>
       </Card>
     </div>
@@ -710,6 +925,7 @@ function Dashboard({ user, onLogout }) {
       <div style={{ position: "relative" }}>
         {currentUser.role === "user" && tab === "search" && <SearchPandits user={currentUser} />}
         {currentUser.role === "user" && tab === "bookings" && <MyBookings user={currentUser} />}
+        {currentUser.role === "user" && tab === "profile" && <UserProfile user={currentUser} setUser={setCurrentUser} />}
         {currentUser.role === "pandit" && tab === "profile" && <PanditProfile user={currentUser} setUser={setCurrentUser} />}
         {currentUser.role === "pandit" && tab === "requests" && <BookingRequests user={currentUser} />}
       </div>
