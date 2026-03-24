@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+.env.local
+.env.*.local
+.DS_Store
+*.pem
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
