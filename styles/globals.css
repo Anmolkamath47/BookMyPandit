@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800;900&family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* Light theme */
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
   --bg-tertiary: #e9ecef;
-  --bg-card: rgba(255,255,255,0.95);
+  --bg-card: rgba(255,255,255,0.98);
   --bg-overlay: rgba(0,0,0,0.05);
 
   --text-primary: #1a1a1a;
@@ -17,8 +17,9 @@
   --border-secondary: rgba(0,0,0,0.05);
   --border-accent: rgba(139,90,43,0.2);
 
-  --shadow-primary: rgba(0,0,0,0.1);
-  --shadow-secondary: rgba(0,0,0,0.05);
+  --shadow-primary: 0 10px 30px rgba(0,0,0,0.1);
+  --shadow-secondary: 0 5px 15px rgba(0,0,0,0.05);
+  --shadow-hover: 0 20px 40px rgba(0,0,0,0.15);
 
   --input-bg: rgba(255,255,255,0.8);
   --input-border: rgba(139,90,43,0.3);
@@ -26,6 +27,7 @@
 
   --gradient-primary: linear-gradient(135deg,#8b5a2b,#a67c52);
   --gradient-accent: linear-gradient(135deg,#d4af37,#b8860b);
+  --gradient-card: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,249,250,0.5) 100%);
 }
 
 [data-theme="dark"] {
@@ -33,7 +35,7 @@
   --bg-primary: #0a0a0a;
   --bg-secondary: #1a1a1a;
   --bg-tertiary: #2a2a2a;
-  --bg-card: rgba(26,26,26,0.95);
+  --bg-card: rgba(26,26,26,0.98);
   --bg-overlay: rgba(0,0,0,0.3);
 
   --text-primary: #f5f5f5;
@@ -45,8 +47,9 @@
   --border-secondary: rgba(255,255,255,0.05);
   --border-accent: rgba(212,175,55,0.2);
 
-  --shadow-primary: rgba(0,0,0,0.3);
-  --shadow-secondary: rgba(0,0,0,0.2);
+  --shadow-primary: 0 10px 30px rgba(0,0,0,0.4);
+  --shadow-secondary: 0 5px 15px rgba(0,0,0,0.3);
+  --shadow-hover: 0 20px 40px rgba(0,0,0,0.5);
 
   --input-bg: rgba(255,255,255,0.05);
   --input-border: rgba(212,175,55,0.2);
@@ -54,6 +57,7 @@
 
   --gradient-primary: linear-gradient(135deg,#d4af37,#b8860b);
   --gradient-accent: linear-gradient(135deg,#f4e87c,#d4af37);
+  --gradient-card: linear-gradient(135deg, rgba(42,42,42,1) 0%, rgba(26,26,26,0.5) 100%);
 }
 
 * {
@@ -64,10 +68,57 @@
 
 html,
 body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'DM Sans', 'Poppins', system-ui, sans-serif;
   color: var(--text-primary);
   background: var(--bg-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--text-accent);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--input-focus);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.slide-in {
+  animation: slideIn 0.4s ease-in-out;
 }
 
 input[type='date']::-webkit-calendar-picker-indicator {
